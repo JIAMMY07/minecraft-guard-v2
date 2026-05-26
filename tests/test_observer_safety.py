@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from minecraft_guard.observer.snapshot import observe_once
+from minecraft_guard.observer.snapshot import critical_reliability_reasons
 
 from .conftest import make_png, make_window
 
@@ -38,3 +39,8 @@ def test_four_windows_simulated_counts_and_reports(monkeypatch, config, tmp_path
     assert Path(snapshot["report_files"]["markdown"]).exists()
     assert "instance_mapping" in snapshot["windows"][0]
 
+
+def test_capture_method_metadata_does_not_force_uncertain() -> None:
+    reasons = ["print_window_blank_or_black", "capture_method:image_grab"]
+    assert critical_reliability_reasons(reasons) == []
+    assert critical_reliability_reasons(["window_minimized"]) == ["window_minimized"]

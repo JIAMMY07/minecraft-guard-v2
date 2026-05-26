@@ -33,6 +33,14 @@ python -m pip install -e .
 python -m minecraft_guard.cli observe-once
 ```
 
+Se vuoi fare un controllo attivo preliminare che ripristina le finestre Minecraft minimizzate prima dell'osservazione:
+
+```powershell
+python -m minecraft_guard.cli observe-once --restore-minimized
+```
+
+Questa opzione non invia input di gioco. Esegue solo un restore finestra esplicito e poi torna al ciclo observer.
+
 Output atteso:
 
 ```text
@@ -111,3 +119,9 @@ I test coprono osservatore passivo, mapping log, redaction, detector prudente, p
 - Separare dataset di taratura e validazione.
 - Aggiungere OCR reale solo se migliora la prudenza.
 - Abilitare `run-once`/`watch` solo dopo verifica see -> think -> act -> verify e state machine rigida.
+
+## Note tecniche recenti
+
+- La cattura prova prima Win32 `PrintWindow`, utile per alcune finestre coperte, e fa fallback a `ImageGrab` quando il frame risulta vuoto, troppo piccolo o non affidabile.
+- Il detector usa un estrattore di feature separato con regioni per hotbar, banda chat e scoreboard. Se `opencv-python` e disponibile, aggiunge anche una misura di densita bordi.
+- Mineflayer/Mindcraft restano solo riferimenti architetturali: questa V2 osserva client Minecraft reali gia aperti, non crea un bot client alternativo.

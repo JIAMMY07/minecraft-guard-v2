@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from minecraft_guard.vision.detector import detect_visual_state
+from minecraft_guard.vision.features import extract_visual_features
 
 from .conftest import make_png
 
@@ -70,3 +71,18 @@ def test_visual_hotbar_detects_survival_game(tmp_path: Path) -> None:
     image.save(path)
     result = detect_visual_state(path)
     assert result.state == "survival_game"
+
+
+def test_feature_extraction_reports_region_scores(tmp_path: Path) -> None:
+    from PIL import Image, ImageDraw
+
+    image = Image.new("RGB", (640, 360), (80, 110, 80))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((180, 305, 460, 350), fill=(25, 25, 25))
+    draw.rectangle((190, 315, 440, 342), fill=(90, 90, 90))
+    draw.rectangle((190, 285, 350, 296), fill=(210, 20, 20))
+    path = tmp_path / "features_hotbar.png"
+    image.save(path)
+    features = extract_visual_features(path)
+    assert features.bottom_slot_score > 0.1
+    assert "bottom_slot_score" in features.as_dict()

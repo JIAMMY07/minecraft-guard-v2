@@ -41,8 +41,9 @@ def observe_once(config: GuardConfig | None = None, discover: WindowDiscovery | 
         mapping = map_window_to_log(window, config)
         log_hint = parse_latest_log_hint(mapping.latest_log)
         detection = detect_visual_state(captured_path)
-        if capture_reasons:
-            detection = detection_with_capture_reasons(detection, capture_reasons)
+        critical_capture_reasons = capture_reasons if not captured_path else critical_reliability_reasons(capture_reasons)
+        if critical_capture_reasons:
+            detection = detection_with_capture_reasons(detection, critical_capture_reasons)
         perception = build_perception(
             window.window_id,
             str(captured_path) if captured_path else None,
@@ -106,6 +107,14 @@ def detection_with_capture_reasons(detection: Any, capture_reasons: list[str]) -
         uncertainty_reasons=sorted(set(list(getattr(detection, "uncertainty_reasons", [])) + capture_reasons)),
         evidence=getattr(detection, "evidence", {}),
     )
+
+
+def critical_reliability_reasons(capture_reasons: list[str]) -> list[str]:
+    non_critical_prefixes = (
+        "capture_method:",
+        "print_window_",
+    )
+    return [reason for reason in capture_reasons if not reason.startswith(non_critical_prefixes)]
 
 
 def format_summary(snapshot: dict[str, Any]) -> str:

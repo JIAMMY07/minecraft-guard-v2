@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from minecraft_guard.vision.features import VisualFeatures, extract_visual_features
 from minecraft_guard.vision.states import VisualState
 from minecraft_guard.vision.ui_objects import UIObject
 
@@ -67,15 +67,11 @@ def detect_visual_state(image_path: str | Path | None) -> VisualDetection:
         )
 
     try:
-        from PIL import Image  # type: ignore
-
-        with Image.open(path) as image:
-            image = image.convert("RGB").resize((64, 36))
-            pixels = list(image.getdata())
+        features = extract_visual_features(path)
     except Exception as exc:
         return uncertain(f"image_unreadable:{type(exc).__name__}", {"path": str(path)})
 
-    return classify_from_pixels(pixels, path)
+    return classify_from_features(features, path)
 
 
 def state_from_filename(path: Path) -> str | None:
@@ -86,43 +82,23 @@ def state_from_filename(path: Path) -> str | None:
     return None
 
 
-def classify_from_pixels(pixels: list[tuple[int, int, int]], path: Path) -> VisualDetection:
-    if not pixels:
-        return uncertain("empty_image", {"path": str(path)})
-    brightness = [sum(pixel) / 3 for pixel in pixels]
-    avg = sum(brightness) / len(brightness)
-    very_dark = sum(1 for value in brightness if value < 35) / len(brightness)
-    greenish = sum(1 for r, g, b in pixels if g > r + 25 and g > b + 10) / len(pixels)
-    gray = sum(1 for r, g, b in pixels if abs(r - g) < 12 and abs(g - b) < 12 and 60 < r < 200) / len(pixels)
-    red_text = sum(1 for r, g, b in pixels if r > 150 and g < 95 and b < 95) / len(pixels)
-    orange_text = sum(1 for r, g, b in pixels if r > 175 and 60 < g < 160 and b < 95) / len(pixels)
-    bright_text = sum(1 for r, g, b in pixels if r > 180 and g > 180 and b > 180) / len(pixels)
-    bottom_pixels = pixels[-max(1, int(len(pixels) * 0.28)) :]
-    bottom_red = sum(1 for r, g, b in bottom_pixels if r > 140 and g < 85 and b < 85) / len(bottom_pixels)
-    bottom_dark = sum(1 for r, g, b in bottom_pixels if r < 55 and g < 55 and b < 55) / len(bottom_pixels)
-    bottom_gray = sum(1 for r, g, b in bottom_pixels if abs(r - g) < 16 and abs(g - b) < 16 and 50 < r < 210) / len(bottom_pixels)
-    color_bucket = Counter("green" if g > r + 25 and g > b + 10 else "gray" if abs(r - g) < 12 and abs(g - b) < 12 else "other" for r, g, b in pixels)
-    evidence = {
-        "average_brightness": round(avg, 2),
-        "very_dark_ratio": round(very_dark, 3),
-        "greenish_ratio": round(greenish, 3),
-        "gray_ratio": round(gray, 3),
-        "red_text_ratio": round(red_text, 3),
-        "orange_text_ratio": round(orange_text, 3),
-        "bright_text_ratio": round(bright_text, 3),
-        "bottom_red_ratio": round(bottom_red, 3),
-        "bottom_dark_ratio": round(bottom_dark, 3),
-        "bottom_gray_ratio": round(bottom_gray, 3),
-        "dominant_bucket": color_bucket.most_common(1)[0][0],
-    }
-    if red_text > 0.003 and very_dark > 0.035 and (bright_text > 0.006 or orange_text > 0.002):
-        confidence = 0.82 if orange_text > 0.0006 else 0.76
+def classify_from_features(features: VisualFeatures, path: Path) -> VisualDetection:
+    evidence = features.as_dict()
+    if (
+        features.red_text_ratio > 0.003
+        and features.very_dark_ratio > 0.035
+        and (features.bright_text_ratio > 0.006 or features.orange_text_ratio > 0.002)
+        and features.chat_band_score > 0.025
+    ):
+        confidence = 0.84 if features.orange_text_ratio > 0.0006 else 0.77
         return VisualDetection(VisualState.LOGIN_PROMPT.value, confidence, objects_for_state(VisualState.LOGIN_PROMPT.value), [], [], evidence)
-    if bottom_red > 0.006 and bottom_dark > 0.075 and bottom_gray > 0.09:
-        return VisualDetection(VisualState.SURVIVAL_GAME.value, 0.8, objects_for_state(VisualState.SURVIVAL_GAME.value), [], [], evidence)
-    if very_dark > 0.82:
+    if features.bottom_slot_score > 0.28 and features.bottom_red_ratio > 0.006:
+        return VisualDetection(VisualState.SURVIVAL_GAME.value, 0.82, objects_for_state(VisualState.SURVIVAL_GAME.value), [], [], evidence)
+    if features.right_scoreboard_score > 0.08 and features.bottom_slot_score > 0.16:
+        return VisualDetection(VisualState.LOBBY.value, 0.76, objects_for_state(VisualState.LOBBY.value), [], [], evidence)
+    if features.very_dark_ratio > 0.82:
         return VisualDetection(VisualState.LOADING.value, 0.76, [UIObject("dark_loading_screen", 0.76)], [], [], evidence)
-    if greenish > 0.33 and gray > 0.08:
+    if features.greenish_ratio > 0.33 and features.gray_ratio > 0.08 and features.bottom_slot_score > 0.12:
         return VisualDetection(VisualState.SURVIVAL_GAME.value, 0.78, objects_for_state(VisualState.SURVIVAL_GAME.value), [], [], evidence)
     return uncertain("no_strong_visual_evidence", evidence)
 
