@@ -1,0 +1,10 @@
+[
+  {
+    "name": "nome istanza",
+    "window_title_contains": "Minecraft",
+    "process_path_contains": "javaw.exe",
+    "instance_dir": "C:/path/to/instance",
+    "latest_log": "C:/path/to/instance/logs/latest.log"
+  }
+]
+

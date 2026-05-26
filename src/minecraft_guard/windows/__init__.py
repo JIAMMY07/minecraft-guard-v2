@@ -1,0 +1,2 @@
+"""Passive Windows discovery helpers."""
+

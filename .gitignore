@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Generated local/runtime artifacts. These can contain window titles,
+# usernames, local paths, Minecraft command lines, screenshots, or tokens.
+data/screenshots/*
+data/reports/*
+data/replay/*
+data/labels/*
+!data/screenshots/.gitkeep
+!data/reports/.gitkeep
+!data/replay/.gitkeep
+!data/labels/.gitkeep
+
+# Local manual mapping may contain personal filesystem paths.
+config/instances.json

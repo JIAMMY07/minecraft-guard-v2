@@ -1,0 +1,22 @@
+{
+  "observer": {
+    "min_confidence": 0.75,
+    "uncertain_confidence": 0.45,
+    "screenshot_format": "png"
+  },
+  "automation": {
+    "enabled": false,
+    "min_confidence": 0.9,
+    "post_action_delay_seconds": 1.0
+  },
+  "paths": {
+    "screenshots": "data/screenshots",
+    "reports": "data/reports",
+    "replay": "data/replay",
+    "labels": "data/labels"
+  },
+  "redaction": {
+    "enabled": true
+  }
+}
+
